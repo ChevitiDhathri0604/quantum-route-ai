@@ -25,7 +25,6 @@ function MapClickHandler({ isAddingPoint, onMapClick }) {
 
 const ROUTE_COLORS = ['#06b6d4', '#a855f7', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
 
-// Default Fallback Dataset (Hyderabad Logistics Hub)
 const DEFAULT_WAREHOUSE = {
   id: "depot_hyd",
   name: "Hyderabad Logistics Hub",
@@ -79,11 +78,10 @@ export default function FleetMap({
   const centerLat = activeWarehouse?.lat || 17.385044;
   const centerLng = activeWarehouse?.lng || 78.486671;
 
-  // Custom Leaflet DivIcons
   const createWarehouseIcon = () =>
     L.divIcon({
       className: 'custom-warehouse-icon',
-      html: `<div class="w-10 h-10 bg-gradient-to-tr from-amber-600 to-yellow-400 border-2 border-white rounded-xl shadow-2xl flex items-center justify-center text-xl font-bold">🏭</div>`,
+      html: `<div class="w-10 h-10 bg-amber-500 border-2 border-white rounded-xl shadow-2xl flex items-center justify-center text-xl font-bold">🏭</div>`,
       iconSize: [40, 40],
       iconAnchor: [20, 20],
     });
@@ -124,12 +122,12 @@ export default function FleetMap({
   };
 
   return (
-    <div className={`relative w-full h-full rounded-xl overflow-hidden border border-slate-800 shadow-2xl ${isAddingPoint ? 'cursor-crosshair' : ''}`}>
+    <div className={`relative w-full h-full min-h-[460px] rounded-xl overflow-hidden border border-slate-800 shadow-2xl ${isAddingPoint ? 'cursor-crosshair' : ''}`}>
       {/* Map Header Overlay */}
       <div className="absolute top-3 left-3 z-[1000] glass-panel px-4 py-2.5 rounded-xl border border-slate-700/80 flex items-center gap-3 shadow-xl">
         <div className="flex items-center gap-2">
           <Truck className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-bold text-slate-100">Live Logistics Command Map</span>
+          <span className="text-xs font-bold text-slate-100">Live Logistics Command Map (Hyderabad Hub)</span>
         </div>
         <span className={`text-[11px] px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
           isAddingPoint
@@ -142,13 +140,14 @@ export default function FleetMap({
 
       <MapContainer
         center={[centerLat, centerLng]}
-        zoom={13}
+        zoom={12}
         scrollWheelZoom={true}
-        className="w-full h-full"
+        className="w-full h-full min-h-[460px]"
       >
+        {/* Standard OpenStreetMap Tile Server - 100% Reliable for Cities & Roads */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         <MapClickHandler isAddingPoint={isAddingPoint} onMapClick={onMapClick} />
@@ -193,7 +192,9 @@ export default function FleetMap({
         {activeVehicles.map((v, idx) => {
           const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
           const isBroken = v.status === 'BROKEN DOWN';
-          const polylineCoords = v.route ? v.route.map((p) => [p.lat, p.lng]) : [];
+          
+          // Format polyline coordinates properly
+          const polylineCoords = v.route ? v.route.map((p) => Array.isArray(p) ? p : [p.lat, p.lng]) : [];
 
           return (
             <React.Fragment key={v.id}>
@@ -203,14 +204,14 @@ export default function FleetMap({
                   positions={polylineCoords}
                   pathOptions={{
                     color: isBroken ? '#ef4444' : color,
-                    weight: isBroken ? 2 : 4,
+                    weight: isBroken ? 3 : 5,
                     dashArray: isBroken ? '6, 6' : null,
-                    opacity: isBroken ? 0.4 : 0.85,
+                    opacity: isBroken ? 0.5 : 0.9,
                   }}
                 />
               )}
 
-              {/* Animated Vehicle Marker */}
+              {/* Vehicle Marker */}
               <Marker
                 position={[v.lat, v.lng]}
                 icon={createVehicleIcon(v, idx)}
