@@ -15,7 +15,6 @@ function MapClickHandler({ isAddingPoint, onMapClick }) {
 
   useMapEvents({
     click(e) {
-      // Trigger if mode active OR if callback is present
       if (onMapClickRef.current && (isAddingRef.current || true)) {
         onMapClickRef.current(e.latlng.lat, e.latlng.lng);
       }
@@ -24,19 +23,61 @@ function MapClickHandler({ isAddingPoint, onMapClick }) {
   return null;
 }
 
-// Vehicle route colors
 const ROUTE_COLORS = ['#06b6d4', '#a855f7', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
 
+// Default Fallback Dataset (Hyderabad Logistics Hub)
+const DEFAULT_WAREHOUSE = {
+  id: "depot_hyd",
+  name: "Hyderabad Logistics Hub",
+  lat: 17.385044,
+  lng: 78.486671,
+  address: "Hitec City / Madhapur Main Hub, Hyderabad"
+};
+
+const DEFAULT_DELIVERIES = [
+  { id: "D01", customer: "Nexus Mall - KPHB", lat: 17.4842, lng: 78.3889, priority: "High", weight: 18.0, status: "Assigned", assigned_vehicle: "V01" },
+  { id: "D02", customer: "Cyber Towers - Hitec City", lat: 17.4504, lng: 78.3808, priority: "Emergency", weight: 12.0, status: "Assigned", assigned_vehicle: "V01" },
+  { id: "D03", customer: "Inorbit Mall - Madhapur", lat: 17.4348, lng: 78.3867, priority: "Medium", weight: 25.0, status: "Assigned", assigned_vehicle: "V02" },
+  { id: "D04", customer: "IKEA Hyderabad - Raidurg", lat: 17.4375, lng: 78.3761, priority: "High", weight: 30.0, status: "Assigned", assigned_vehicle: "V02" },
+  { id: "D05", customer: "Mindspace IT Park", lat: 17.4419, lng: 78.3813, priority: "Medium", weight: 15.0, status: "Assigned", assigned_vehicle: "V03" },
+  { id: "D06", customer: "Financial District - Nanakramguda", lat: 17.4140, lng: 78.3490, priority: "High", weight: 22.0, status: "Assigned", assigned_vehicle: "V03" },
+  { id: "D07", customer: "Gachibowli Stadium Hub", lat: 17.4447, lng: 78.3483, priority: "Low", weight: 10.0, status: "Assigned", assigned_vehicle: "V04" },
+  { id: "D08", customer: "DLF Cyber City - Gachibowli", lat: 17.4498, lng: 78.3592, priority: "Medium", weight: 14.0, status: "Assigned", assigned_vehicle: "V04" }
+];
+
+const DEFAULT_VEHICLES = [
+  {
+    id: "V01", name: "Quantum Express 1", type: "Heavy EV Van", capacity: 120, current_load: 30, fuel_level: 92, lat: 17.465, lng: 78.385, speed: 45, status: "Active", assigned_deliveries: ["D01", "D02"],
+    route: [{ lat: 17.385044, lng: 78.486671 }, { lat: 17.4842, lng: 78.3889 }, { lat: 17.4504, lng: 78.3808 }, { lat: 17.385044, lng: 78.486671 }], route_distance_km: 24.5, eta_minutes: 15
+  },
+  {
+    id: "V02", name: "Quantum Express 2", type: "Medium EV Van", capacity: 90, current_load: 55, fuel_level: 88, lat: 17.436, lng: 78.380, speed: 42, status: "Active", assigned_deliveries: ["D03", "D04"],
+    route: [{ lat: 17.385044, lng: 78.486671 }, { lat: 17.4348, lng: 78.3867 }, { lat: 17.4375, lng: 78.3761 }, { lat: 17.385044, lng: 78.486671 }], route_distance_km: 28.2, eta_minutes: 18
+  },
+  {
+    id: "V03", name: "Quantum Express 3", type: "Cargo Trike", capacity: 70, current_load: 37, fuel_level: 95, lat: 17.425, lng: 78.365, speed: 35, status: "Active", assigned_deliveries: ["D05", "D06"],
+    route: [{ lat: 17.385044, lng: 78.486671 }, { lat: 17.4419, lng: 78.3813 }, { lat: 17.4140, lng: 78.3490 }, { lat: 17.385044, lng: 78.486671 }], route_distance_km: 31.0, eta_minutes: 22
+  },
+  {
+    id: "V04", name: "Quantum Express 4", type: "Heavy EV Van", capacity: 130, current_load: 24, fuel_level: 84, lat: 17.447, lng: 78.353, speed: 48, status: "Active", assigned_deliveries: ["D07", "D08"],
+    route: [{ lat: 17.385044, lng: 78.486671 }, { lat: 17.4447, lng: 78.3483 }, { lat: 17.4498, lng: 78.3592 }, { lat: 17.385044, lng: 78.486671 }], route_distance_km: 26.8, eta_minutes: 14
+  }
+];
+
 export default function FleetMap({
-  warehouse,
-  deliveries = [],
-  vehicles = [],
+  warehouse = DEFAULT_WAREHOUSE,
+  deliveries = DEFAULT_DELIVERIES,
+  vehicles = DEFAULT_VEHICLES,
   isAddingPoint = false,
   onMapClick,
   onVehicleBreakdown
 }) {
-  const centerLat = warehouse?.lat || 17.385044;
-  const centerLng = warehouse?.lng || 78.486671;
+  const activeWarehouse = warehouse || DEFAULT_WAREHOUSE;
+  const activeDeliveries = deliveries && deliveries.length > 0 ? deliveries : DEFAULT_DELIVERIES;
+  const activeVehicles = vehicles && vehicles.length > 0 ? vehicles : DEFAULT_VEHICLES;
+
+  const centerLat = activeWarehouse?.lat || 17.385044;
+  const centerLng = activeWarehouse?.lng || 78.486671;
 
   // Custom Leaflet DivIcons
   const createWarehouseIcon = () =>
@@ -113,20 +154,20 @@ export default function FleetMap({
         <MapClickHandler isAddingPoint={isAddingPoint} onMapClick={onMapClick} />
 
         {/* Warehouse Marker */}
-        {warehouse && (
-          <Marker position={[warehouse.lat, warehouse.lng]} icon={createWarehouseIcon()}>
+        {activeWarehouse && (
+          <Marker position={[activeWarehouse.lat, activeWarehouse.lng]} icon={createWarehouseIcon()}>
             <Popup>
               <div className="p-1 font-sans text-xs">
-                <div className="font-bold text-amber-400 text-sm">🏭 {warehouse.name}</div>
-                <div className="text-slate-300 mt-1">{warehouse.address}</div>
-                <div className="text-[10px] text-slate-400 mt-1">Lat: {warehouse.lat}, Lng: {warehouse.lng}</div>
+                <div className="font-bold text-amber-400 text-sm">🏭 {activeWarehouse.name}</div>
+                <div className="text-slate-300 mt-1">{activeWarehouse.address}</div>
+                <div className="text-[10px] text-slate-400 mt-1">Lat: {activeWarehouse.lat}, Lng: {activeWarehouse.lng}</div>
               </div>
             </Popup>
           </Marker>
         )}
 
         {/* Delivery Point Markers */}
-        {deliveries.map((d) => (
+        {activeDeliveries.map((d) => (
           <Marker
             key={d.id}
             position={[d.lat, d.lng]}
@@ -149,7 +190,7 @@ export default function FleetMap({
         ))}
 
         {/* Vehicle Polylines & Markers */}
-        {vehicles.map((v, idx) => {
+        {activeVehicles.map((v, idx) => {
           const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
           const isBroken = v.status === 'BROKEN DOWN';
           const polylineCoords = v.route ? v.route.map((p) => [p.lat, p.lng]) : [];
@@ -187,7 +228,7 @@ export default function FleetMap({
                       <div>Fuel / Battery: <strong className="text-amber-400">{v.fuel_level}%</strong></div>
                       <div>Route Distance: <strong>{v.route_distance_km} km</strong></div>
                       <div>ETA: <strong>{v.eta_minutes} min</strong></div>
-                      <div>Assigned Stops: <strong>{v.assigned_deliveries.length}</strong></div>
+                      <div>Assigned Stops: <strong>{v.assigned_deliveries?.length || 0}</strong></div>
                     </div>
 
                     {!isBroken && onVehicleBreakdown && (
